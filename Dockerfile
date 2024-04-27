@@ -12,7 +12,4 @@ FROM base as production
 WORKDIR /home/node/app
 COPY --chown=node:node --from=development /home/node/app/node_modules /home/node/app/node_modules
 RUN npm run build
-
-FROM nginx:stable-alpine as deploy
-WORKDIR /home/node/app
-COPY --chown=node:node --from=production /home/node/app/build /usr/share/nginx/html/
+CMD npm run serve -- --port 80
