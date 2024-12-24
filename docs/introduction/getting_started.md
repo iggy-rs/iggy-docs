@@ -109,7 +109,7 @@ To make use of logging, simply invoke `tracing_subscriber::fmt::init()` at the b
 use std::error::Error;
 use iggy::client::{Client, UserClient};
 use iggy::clients::client::IggyClient;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -139,6 +139,10 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use std::error::Error;
 use tracing::{info, warn};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -170,7 +174,7 @@ async fn init_system(client: &IggyClient) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
     {
@@ -287,6 +291,10 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -301,6 +309,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await?;
     init_system(&client).await;
+    produce_messages(&client).await?;
     Ok(())
 }
 
@@ -319,7 +328,7 @@ async fn init_system(client: &IggyClient) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
     {
@@ -438,7 +447,7 @@ async fn consume_messages(client: &IggyClient) -> Result<(), Box<dyn Error>> {
 And here's the final code for our consumer application:
 
 ```rust
-use iggy::client::{Client, UserClient};
+use iggy::client::{Client, MessageClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -447,6 +456,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
+use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -505,7 +515,7 @@ async fn consume_messages(client: &IggyClient) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
+fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a simple string.
     let payload = std::str::from_utf8(&message.payload)?;
     info!(
