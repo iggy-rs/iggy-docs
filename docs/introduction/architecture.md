@@ -31,7 +31,7 @@ To navigate the log, you can use the offset, which is the position of the record
 +-------------------------------------------------------+
 |                  Append-Only Log                      |
 +-------------------------------------------------------+
-| Message1	| Message2 | Message3 | Message4 | Message5 |
+| Message1  | Message2 | Message3 | Message4 | Message5 |
 | --------  | -------- | -------- | -------- | -------- |
 | Offset=0  | Offset=1 | Offset=2 | Offset=3 | Offset=4 |
 +-------------------------------------------------------+
@@ -71,7 +71,6 @@ streams
             │             └── 1
             │                 ├── 00000000000000000000.index
             │                 ├── 00000000000000000000.log
-            │                 ├── 00000000000000000000.timeindex
 ```
 
-The additional `.index` and `.timeindex` files are being created automatically and are being used to speed up the search operations by keeping track of the offsets and timestamps of the records.
+The additional `.index` file is being created automatically and are being used to speed up the search operations by keeping track of the offsets and timestamps of the records.

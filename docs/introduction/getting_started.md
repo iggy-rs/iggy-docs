@@ -13,11 +13,17 @@ In the typical scenario, e.g. when working with the microservices architecture o
 
 The completed sample can be found in [repository](https://github.com/iggy-rs/iggy/tree/master/examples/src/getting-started), however, we will go through the implementation step by step, so that you can get a better understanding of how to build the applications from scratch.
 
+Also, please do keep in mind that we'll be using the default implementation of `IggyClient` which provides a wrapper on top of the low-level, transport-specific `Client` trait (which you can always use, if you want to have more control over the communication with the server).
+
+On the other hand, if you're looking for a **more developer-friendly client builder API** providing additional features and extensions, please check the next article under [High-level SDK](/introduction/high-level-sdk) section (this is typically how you'd use Iggy SDK in the real-world applications).
+
+Nevertheless, let's start with the basic scenario, and build the producer and consumer applications using the default `IggyClient` implementation, so you can get a better understanding of how to work with the streaming server.
+
 ## Starting the Iggy server
 
 For our purpose, we will focus on the basic scenario in order to keep things simple. Before we begin implementing the consumer and producer apps, we need to start the Iggy streaming server first - since there's no official package to be downloaded yet, the only way to get things up and running is by cloning the [repository](https://github.com/iggy-rs/iggy) and then starting the server by running the following command: `cargo r --bin iggy-server` or by building & running the Docker image via `docker compose up`. The official images can be found [here](https://hub.docker.com/r/iggyrs/iggy), simply type `docker pull iggyrs/iggy`. All the data used by the server, will be persisted under `local_data` directory, unless specified differently in the configuration.
 
-You might also want to take a look at the [samples quick start](/samples/start), to see other available commands, how to run the tests, benchmarks, built-in client etc. As long as the Iggy server is running, we're good to go. If you'd like to play with the configuration (e.g. change the addresses, ports, caching or so) you will find the `server.toml` (the default configuration) or `server.json` file under `configs` directory in the main root of the repository.
+As long as the Iggy server is running, we're good to go. If you'd like to play with the configuration (e.g. change the addresses, ports, caching or so) you will find the `server.toml` under `configs` directory in the root of the repository.
 
 ## Setting up the project
 
@@ -41,7 +47,7 @@ name = "consumer"
 path = "src/consumer/main.rs"
 ```
 
-Just to make sure that everything is set correctly, try to run the app with `cargo r --bin consumer`. 
+Just to make sure that everything is set correctly, try to run the app with `cargo r --bin consumer`.
 
 Now, let's do the same for the `producer` part. Create a new `producer` directory, copy & paste the existing `main.rs`, and update the `Cargo.toml` with the following code:
 
@@ -89,7 +95,7 @@ The default server address being `127.0.0.1:8090` is configured on the server si
 
 We could make use of more advanced components such as [`ClientProvider`](https://github.com/iggy-rs/iggy/blob/master/sdk/src/client_provider.rs), pass the custom configuration built via console args to choose between the different protocols as all the available clients implement the same [Client](https://github.com/iggy-rs/iggy/blob/master/sdk/src/client.rs) trait and so on.
 
-If you're eager to find out how to build more advanced (and configurable) applications, check the [samples](/samples/start) section or play with the `examples` which are part of the repository. Nevertheless, let's focus on implementing our producer side :)
+If you're eager to find out how to build more advanced (and configurable) applications, check the Rust [examples](/sdk/rust/examples). Nevertheless, let's focus on implementing our producer side :)
 
 Next, we need to authenticate the user, as all the available actions (except the `ping` and `login`) require the user to be authenticated and have the appropriate permissions e.g. you might be able to send or poll the messages, but you won't be able to create the stream or topic. For the sake of simplicity, we will use the default credentials for the root user (username: `iggy`, password: `iggy`), that can do anything and cannot be deleted. You can easily create more users and assign the specific permissions to them, however, this is out of scope for this tutorial.
 
@@ -184,7 +190,7 @@ async fn init_system(client: &IggyClient) {
 }
 ```
 
-Finally, let's send some messages into our stream. We will implement the basic loop with an interval between each iteration to simulate publishing the batch of messages. Since the streaming server works directly with the binary data, and couldn't care less about the (de)serialization format for the message payload, it's really up to you, how to efficiently stream the messages for your use case. 
+Finally, let's send some messages into our stream. We will implement the basic loop with an interval between each iteration to simulate publishing the batch of messages. Since the streaming server works directly with the binary data, and couldn't care less about the (de)serialization format for the message payload, it's really up to you, how to efficiently stream the messages for your use case.
 
 In our example, we will simply use the string payload, and pass it via `from_str` trait to construct the [Message](https://github.com/iggy-rs/iggy/blob/master/sdk/src/messages/send_messages.rs#L423).
 

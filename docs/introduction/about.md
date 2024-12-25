@@ -16,7 +16,7 @@ The goal of the project is to make a distributed streaming platform (running as 
 - **Highly performant**, persistent append-only log for the message streaming
 - **Very high throughput** for both writes and reads
 - **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
-- **Users authentication and authorization** with granular permissions
+- **Users authentication and authorization** with granular permissions and PAT (Personal Access Tokens)
 - Support for multiple streams, topics and partitions
 - Support for **multiple transport protocols** (QUIC, TCP, HTTP)
 - Fully operational RESTful API which can be optionally enabled
@@ -33,10 +33,13 @@ The goal of the project is to make a distributed streaming platform (running as 
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - **Message expiry** with auto deletion based on the configurable **retention policy**
 - Additional features such as **server side message deduplication**
+- **Multi-tenant** support via abstraction of **streams** whch group **topics**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**
-- Built-in **CLI** to manage the streaming server
+- Optional **data backups & archivization** on disk and/or the **S3** compatible cloud storage (e.g. AWS S3)
+- Support for **[OpenTelemetry](https://opentelemetry.io/)** logs & traces + Prometheus metrics
+- Built-in **CLI** to manage the streaming server installable via `cargo install iggy-cli`
 - Built-in **benchmarking app** to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
@@ -61,5 +64,3 @@ There's an ongoing effort to build the administrative web UI for the server, whi
 ### Docker
 
 You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`. The official images can be found [here](https://hub.docker.com/r/iggyrs/iggy), simply type `docker pull iggyrs/iggy`.
-
-Additionally, you can run the `client` which is available in the running container, by executing: `docker exec -it iggy-server /client`.

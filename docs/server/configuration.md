@@ -2,115 +2,493 @@
 id: server-configuration
 slug: /server/configuration
 title: Configuration
-sidebar_position: 1
+sidebar_position: 2
 ---
 
-## Introduction
+The configuration can be found in `server.toml` file in `configs` directory. The config file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.toml` (or other command depending on OS). You can also provide the `.env` file in order to override the configuration - the convention is to use `IGGY_` prefix for the environment variables e.g. `IGGY_HTTP_ENABLED=true`.
 
-Iggy server is the most important part of the system. It is responsible for managing streams, connections etc., and for serving the data to the consumers.
-
-Currently, there's no downloadable package of the Iggy server yet, thus, you need to clone the [repository](http://github.com/iggy-rs/iggy) and start the server with `cargo r --bin iggy-server` (or `cargo r --bin iggy-server --r` for the release build, which of course results in the much higher performance). You can also build the Docker image available in the repository or use the official images available [here](https://hub.docker.com/r/iggyrs/iggy).
-
-Keep in mind, that when you compile the source code in release mode, the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in [profile](https://github.com/iggy-rs/iggy/blob/master/Cargo.toml#L2).
-
-## Configuration
-
-The configuration can be found in `server.toml` (the default one) or `server.json` file in `configs` directory. The config file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.json` (or other command depending on OS).
+In case no configuration file is found, the server will use the default configuration.
 
 Let's take a look at the configuration file, and discuss the available options.
 
 ```toml
+[data_maintenance.archiver]
+# Enables or disables the archiver process.
+enabled = false
+
+# Kind of archiver to use. Available options: "disk".
+kind = "disk"
+
+[data_maintenance.archiver.disk]
+# Path for storing the archived data on disk.
+path = "local_data/archive"
+
+[data_maintenance.archiver.s3]
+# Access key ID for the S3 bucket.
+key_id = "123"
+
+# Secret access key for the S3 bucket
+key_secret = "secret"
+
+# Name of the S3 bucket.
+bucket = "iggy"
+
+# Endpoint of the S3 region.
+endpoint = "http://localhost:9000"
+
+# Region of the S3 bucket.
+region = "eu-west-1"
+
+# Temporary directory for storing the data before uploading to S3.
+tmp_upload_dir = "local_data/s3_tmp"
+
+[data_maintenance.messages]
+# Enables or disables the archiver process for closed segments containing messages.
+archiver_enabled = false
+
+# Enables or disables the expired message cleaner process.
+cleaner_enabled = false
+
+# Interval for running the message archiver and cleaner.
+interval = "1 m"
+
+[data_maintenance.state]
+# Enables or disables the archiver process for state log.
+archiver_enabled = false
+
+# Sets whether the state archiver should overwrite existing log archive or always create a new one.
+overwrite = true
+
+# Interval for running the state archiver
+interval = "1 m"
+
+# HTTP server configuration
 [http]
+# Determines if the HTTP server is active.
+# `true` enables the server, allowing it to handle HTTP requests.
+# `false` disables the server, preventing it from handling HTTP requests.
 enabled = true
+
+# Specifies the network address and port for the HTTP server.
+# The format is "HOST:PORT". For example, "0.0.0.0:3000" listens on all network interfaces on port 3000.
 address = "0.0.0.0:3000"
 
+# Maximum size of the request body in bytes. For security reasons, the default limit is 2 MB.
+max_request_size = "2 MB"
+
+# Configuration for Cross-Origin Resource Sharing (CORS).
 [http.cors]
+# Controls whether CORS is enabled for the HTTP server.
+# `true` allows handling cross-origin requests with specified rules.
+# `false` blocks cross-origin requests, enhancing security.
 enabled = true
-allowed_methods = [ "GET", "POST", "PUT", "DELETE" ]
-allowed_origins = [ "*" ]
-allowed_headers = [ "content-type" ]
-exposed_headers = [ ]
+
+# Specifies which HTTP methods are allowed when CORS is enabled.
+# For example, ["GET", "POST"] would allow only GET and POST requests.
+allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+
+# Defines which origins are permitted to make cross-origin requests.
+# An asterisk "*" allows all origins. Specific domains can be listed to restrict access.
+allowed_origins = ["*"]
+
+# Lists allowed headers that can be used in CORS requests.
+# For example, ["content-type"] permits only the content-type header.
+allowed_headers = ["content-type"]
+
+# Headers that browsers are allowed to access in CORS responses.
+# An empty array means no additional headers are exposed to browsers.
+exposed_headers = [""]
+
+# Determines if credentials like cookies or HTTP auth can be included in CORS requests.
+# `true` allows credentials to be included, useful for authenticated sessions.
+# `false` prevents credentials, enhancing privacy and security.
 allow_credentials = false
+
+# Allows or blocks requests from private networks in CORS.
+# `true` permits requests from private networks.
+# `false` disallows such requests, providing additional security.
 allow_private_network = false
 
+# JWT (JSON Web Token) configuration for HTTP.
 [http.jwt]
-secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
-expiry = 3600
+# Specifies the algorithm used for signing JWTs.
+# For example, "HS256" indicates HMAC with SHA-256.
+algorithm = "HS256"
 
+# The issuer of the JWT, typically a URL or an identifier of the issuing entity.
+issuer = "iggy.rs"
+
+# Intended audience for the JWT, usually the recipient or system intended to process the token.
+audience = "iggy.rs"
+
+# Lists valid issuers for JWT validation to ensure tokens are from trusted sources.
+valid_issuers = ["iggy.rs"]
+
+# Lists valid audiences for JWT validation to confirm tokens are for the intended recipient.
+valid_audiences = ["iggy.rs"]
+
+# Expiry time for access tokens.
+access_token_expiry = "1 h"
+
+# Tolerance for timing discrepancies during token validation.
+clock_skew = "5 s"
+
+# Time before which the token should not be considered valid.
+not_before = "0 s"
+
+# Secret key for encoding JWTs.
+encoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+
+# Secret key for decoding JWTs.
+decoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+
+# Indicates if the secret key is base64 encoded.
+# `true` means the secret is base64 encoded.
+# `false` means the secret is in plain text.
+use_base64_secret = false
+
+# Metrics configuration for HTTP.
+[http.metrics]
+# Enable or disable the metrics endpoint.
+# `true` makes metrics available at the specified endpoint.
+# `false` disables metrics collection.
+enabled = true
+
+# Specifies the endpoint for accessing metrics, e.g., "/metrics".
+endpoint = "/metrics"
+
+# TLS (Transport Layer Security) configuration for HTTP.
 [http.tls]
+# Controls the use of TLS for encrypted HTTP connections.
+# `true` enables TLS, enhancing security.
+# `false` disables TLS, which may be appropriate in secure internal networks.
 enabled = false
+
+# Path to the TLS certificate file.
 cert_file = "certs/iggy_cert.pem"
+
+# Path to the TLS key file.
 key_file = "certs/iggy_key.pem"
 
+# TCP server configuration.
 [tcp]
+# Determines if the TCP server is active.
+# `true` enables the TCP server for handling TCP connections.
+# `false` disables it, preventing any TCP communication.
 enabled = true
+
+# Defines the network address and port for the TCP server.
+# For example, "0.0.0.0:8090" listens on all network interfaces on port 8090.
 address = "0.0.0.0:8090"
 
+# Whether to use ipv4 or ipv6
+ipv6 = false
+
+# TLS configuration for the TCP server.
 [tcp.tls]
+# Enables or disables TLS for TCP connections.
+# `true` secures TCP connections with TLS.
+# `false` leaves TCP connections unencrypted.
 enabled = false
+
+# Path to the TLS certificate for TCP.
 certificate = "certs/iggy.pfx"
+
+# Password for the TLS certificate, required for accessing the private key.
 password = "iggy123"
 
-[quic]
-enabled = true
-address = "0.0.0.0:8080"
-max_concurrent_bidi_streams = 10_000
-datagram_send_buffer_size = 100_000
-initial_mtu = 8_000
-send_window = 100_000
-receive_window = 100_000
-keep_alive_interval = 5_000
-max_idle_timeout = 10_000
+# Configuration for the TCP socket
+[tcp.socket]
+# Whether to overwrite the OS-default socket parameters
+override_defaults = false
 
+# SO_RCVBUF: maximum size of the receive buffer, can be clamped by the OS
+recv_buffer_size = "100 KB"
+
+# SO_SNDBUF: maximum size of the send buffer, can be clamped by the OS
+send_buffer_size = "100 KB"
+
+# SO_KEEPALIVE: whether to regularly send a keepalive packet maintaining the connection
+keepalive = false
+
+# TCP_NODELAY: enable/disable the Nagle algorithm which buffers data before sending segments
+nodelay = false
+
+# SO_LINGER: delay to wait for while data is being transmitted before closing the socket after a
+# close or shutdown call has been received
+linger = "0 s"
+
+# QUIC protocol configuration.
+[quic]
+# Controls whether the QUIC server is enabled.
+# `true` enables QUIC for fast, secure connections.
+# `false` disables QUIC, possibly for compatibility or simplicity.
+enabled = true
+
+# Network address and port for the QUIC server.
+# For example, "0.0.0.0:8080" binds to all interfaces on port 8080.
+address = "0.0.0.0:8080"
+
+# Maximum number of simultaneous bidirectional streams in QUIC.
+max_concurrent_bidi_streams = 10_000
+
+# Size of the buffer for sending datagrams in QUIC.
+datagram_send_buffer_size = "100 KB"
+
+# Initial Maximum Transmission Unit (MTU) for QUIC connections.
+initial_mtu = "8 KB"
+
+# Size of the sending window in QUIC, controlling data flow.
+send_window = "100 KB"
+
+# Size of the receiving window in QUIC, controlling data flow.
+receive_window = "100 KB"
+
+# Interval for sending keep-alive messages in QUIC.
+keep_alive_interval = "5 s"
+
+# Maximum idle time before a QUIC connection is closed.
+max_idle_timeout = "10 s"
+
+# QUIC certificate configuration.
 [quic.certificate]
+# Indicates whether the QUIC certificate is self-signed.
+# `true` for self-signed certificates, often used in internal or testing environments.
+# `false` for certificates issued by a certificate authority, common in production.
 self_signed = true
+
+# Path to the QUIC TLS certificate file.
 cert_file = "certs/iggy_cert.pem"
+
+# Path to the QUIC TLS key file.
 key_file = "certs/iggy_key.pem"
 
+# Message cleaner configuration.
 [message_cleaner]
+# Enables or disables the background process for deleting expired messages.
+# `true` activates the message cleaner.
+# `false` turns it off, messages will not be auto-deleted based on expiry.
 enabled = true
-interval = 60
 
+# Interval for running the message cleaner.
+interval = "1 m"
+
+# Message saver configuration.
 [message_saver]
+# Enables or disables the background process for saving buffered data to disk.
+# `true` ensures data is periodically written to disk.
+# `false` turns off automatic saving, relying on other triggers for data persistence.
 enabled = true
-enforce_fsync = true
-interval = 30
 
+# Controls whether data saving is synchronous (enforce fsync) or asynchronous.
+# `true` for synchronous saving, ensuring data integrity at the cost of performance.
+# `false` for asynchronous saving, improving performance but with delayed data writing.
+enforce_fsync = true
+
+# Interval for running the message saver.
+interval = "30 s"
+
+# Personal access token configuration.
+[personal_access_token]
+# Sets the maximum number of active tokens allowed per user.
+max_tokens_per_user = 100
+
+# Personal access token cleaner configuration.
+[personal_access_token.cleaner]
+# Enables or disables the token cleaner process.
+# `true` activates periodic token cleaning.
+# `false` disables it, tokens remain active until manually revoked or expired.
+enabled = true
+
+# Interval for running the token cleaner.
+interval = "1 m"
+
+# Heartbeat configuration
+[heartbeat]
+# Enables or disables the client heartbeat verification process.
+enabled = false
+# Interval for expected client heartbeats
+interval = "5 s"
+
+# OpenTelemetry configuration
+[telemetry]
+# Enables or disables telemetry.
+enabled = false
+# Service name for telemetry.
+service_name = "iggy"
+
+# OpenTelemetry logs configuration
+[telemetry.logs]
+# Transport for sending logs. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending logs.
+endpoint = "http://localhost:7281/v1/logs"
+
+# OpenTelemetry traces configuration
+[telemetry.traces]
+# Transport for sending traces. Options: "grpc", "http".
+transport = "grpc"
+# Endpoint for sending traces.
+endpoint = "http://localhost:7281/v1/traces"
+
+# System configuration.
 [system]
+# Base path for system data storage.
 path = "local_data"
 
-[system.database]
-path = "database"
+# Backup configuration
+[system.backup]
+# Path for storing backup.
+path = "backup"
 
+# Compatibility conversion configuration
+[system.backup.compatibility]
+# Subpath of the backup directory where converted segment data is stored after compatibility conversion.
+path = "compatibility"
+
+[system.state]
+# Determines whether to enforce file synchronization on state updates (boolean).
+# `true` ensures immediate writing of data to disk for durability.
+# `false` allows the OS to manage write operations, which can improve performance.
+enforce_fsync = false
+
+# Runtime configuration.
+[system.runtime]
+# Path for storing runtime data.
+# Specifies the directory where any runtime data is stored, relative to `system.path`.
+path = "runtime"
+
+# Logging configuration.
 [system.logging]
+# Path for storing log files.
 path = "logs"
-level = "info"
-max_size_megabytes = 512
-retention_days = 7
 
+# Level of logging detail. Options: "debug", "info", "warn", "error".
+level = "info"
+
+# Maximum size of the log files before rotation.
+max_size = "512 MB"
+
+# Time to retain log files before deletion.
+retention = "7 days"
+
+# Interval for printing system information to the log.
+sysinfo_print_interval = "10 s"
+
+# Cache configuration.
+[system.cache]
+# Enables or disables the system cache.
+# `true` activates caching for frequently accessed data.
+# `false` disables caching, data is always read from the source.
+enabled = true
+
+# Maximum size of the cache, e.g. "4GB".
+size = "4 GB"
+
+# Encryption configuration
 [system.encryption]
+# Determines whether server-side data encryption for the messages payloads and state commands is enabled (boolean).
+# `true` enables encryption for stored data using AES-256-GCM.
+# `false` means data is stored without encryption.
 enabled = false
+
+# The encryption key used when encryption is enabled (string).
+# Should be a 32 bytes length key, provided as a base64 encoded string.
+# This key is required and used only if encryption is enabled.
 key = ""
 
+# Compression configuration
+[system.compression]
+# Allows overriding the default compression algorithm per data segment (boolean).
+# `true` permits different compression algorithms for individual segments.
+# `false` means all data segments use the default compression algorithm.
+allow_override = false
+
+# The default compression algorithm used for data storage (string).
+# "none" indicates no compression, other values can specify different algorithms.
+default_algorithm = "none"
+
+# Stream configuration
 [system.stream]
+# Path for storing stream-related data (string).
+# Specifies the directory where stream data is stored, relative to `system.path`.
 path = "streams"
 
+# Topic configuration
 [system.topic]
+# Path for storing topic-related data (string).
+# Specifies the directory where topic data is stored, relative to `stream.path`.
 path = "topics"
 
-[system.partition]
-path = "partitions"
-deduplicate_messages = false
-enforce_fsync = false
-validate_checksum = false
-messages_required_to_save = 10_000
-messages_buffer = 1_048_576
+# Configures the topic size-based expiry setting.
+# "unlimited" or "0" means topics are kept indefinitely.
+# A size value in human-readable format determines the maximum size of a topic.
+# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
+# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
+# the oldest segment will be deleted upon reaching 10 GB.
+# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
+# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
+max_size = "10 GB"
 
+# Configures whether the oldest segments are deleted when a topic reaches its maximum size (boolean).
+delete_oldest_segments = false
+
+# Partition configuration
+[system.partition]
+# Path for storing partition-related data (string).
+# Specifies the directory where partition data is stored, relative to `topic.path`.
+path = "partitions"
+
+# Determines whether to enforce file synchronization on partition updates (boolean).
+# `true` ensures immediate writing of data to disk for durability.
+# `false` allows the OS to manage write operations, which can improve performance.
+enforce_fsync = false
+
+# Enables checksum validation for data integrity (boolean).
+# `true` activates CRC checks when loading data, guarding against corruption.
+# `false` skips these checks for faster loading at the risk of undetected corruption.
+validate_checksum = false
+
+# The threshold of buffered messages before triggering a save to disk (integer).
+# Specifies how many messages accumulate before persisting to storage.
+# Adjusting this can balance between write performance and data durability.
+messages_required_to_save = 5000
+
+# Segment configuration
 [system.segment]
-message_expiry = 0
-size_bytes = 1_000_000_000
+# Defines the soft limit for the size of a storage segment.
+# When a segment reaches this size, a new segment is created for subsequent data.
+# Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
+size = "1 GB"
+# Configures the message time-based expiry setting.
+# "none" means messages are kept indefinitely.
+# A time value in human-readable format determines the lifespan of messages.
+# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
+message_expiry = "none"
+
+# Configures whether expired segments are archived (boolean) or just deleted without archiving.
+archive_expired = false
+
+# Controls whether to cache indexes (time and positional) for segment access (boolean).
+# `true` keeps indexes in memory, speeding up data retrieval.
+# `false` reads indexes from disk, which can conserve memory at the cost of access speed.
 cache_indexes = true
-cache_time_indexes = true
+
+# Message deduplication configuration
+[system.message_deduplication]
+# Controls whether message deduplication is enabled (boolean).
+# `true` activates deduplication, ignoring messages with duplicate IDs.
+# `false` treats each message as unique, even if IDs are duplicated.
+enabled = false
+# Maximum number of ID entries in the deduplication cache (u64).
+max_entries = 1000
+# Maximum age of ID entries in the deduplication cache in human-readable format.
+expiry = "1 m"
+
+# Recovery configuration in case of lost data
+[system.recovery]
+# Controls whether streams/topics/partitions should be recreated if the expected data for existing state is missing (boolean).
+recreate_missing_state = true
 ```
 
 ### HTTP
@@ -138,79 +516,3 @@ An optional transport layer, which can be used to connect to the server with any
 Similar to TCP it's a stateful protocol, however, it's not as performant as TCP. QUIC support is built on top of [Quinn](https://github.com/quinn-rs/quinn) library, and all the remaining options are essentially the direct mapping of the options available in Quinn. QUIC and TCP use the same custom binary protocol specification.
 
 To consume the QUIC API from Iggy SDK, you need to make use of the available `QuicClient` component.
-
-### Message cleaner
-
-The optional component, running in the background, is responsible for deleting the expired messages. The whole segment will be removed, when all the messages in this segment are expired. By default, the expired messages are removed every 60 seconds, but you can change this by setting the `interval` option to the desired value. The `message_expiry` option in the `partition` section of the configuration file specifies the number of seconds after which the message will be marked as expired. If the `message_expiry` is set to 0, then the message expiry is disabled and the data will be kept forever.
-
-### Message saver
-
-The optional component, running in the background, is responsible for saving the buffered data to the disk every X seconds based on the provided `interval`. By default, the data will be written onto disk whenever the amount of `messages_required_to_save` is reached (see the `partition` options below) or in case of the graceful shutdown.
-
-Message saver is enabled by default, but you can disable it by setting `enabled` to `false`. The `enforce_fsync` option specifies whether the data should be saved synchronously (enforce `fsync`) or asynchronously (let the OS decide when to actually flush the data onto disk).
-
-By using this component, you can easily control when the messages are being saved, for example every 1000 records and/or every 30 seconds.
-
-### System
-
-The most comprehensive part of the configuration, which is responsible for configuring the system paths, and the default settings for the streams, topics, partitions and segments. Let's discuss them one by one.
-
-#### Root
-
-- `path` - the path to the directory where the data will be stored. It's relative to the current working directory.
-
-### Database
-
-- `path` - the path to the directory where the database will be stored. It's relative to the `system.path` option.
-
-
-### Logging
-
-- `path`: The path to the directory where the log files will be stored. By default, it is set to "logs". This path is relative to system.path.
-
-- `level`: Specifies the level of logs to be saved. Valid options are "debug", "info", "warn", "error", and "fatal". The default level is "info".
-
-- `max_size_megabytes`: The maximum size of a log folder in megabytes. When this size is reached, logs will rotate, deleting oldest entries. The default size is set to 512 megabytes.
-
-- `retention_days`: The number of days for which log files should be retained. After this period, old log files will be automatically deleted. The default is set to 7 days.
-
-
-#### Encryption
-
-- `enabled` - toggle for the optional server-side data encryption using AES-256-GCM. When enabled, you need to provide the `key` option.
-- `key` - the encryption key of 32 bytes length, provided as a base64 encoded string.
-
-
-#### Stream
-
-- `path` - the path to the directory where the streams will be stored. It's relative to the `system.path` option.
-
-
-#### Topic
-
-- `path` - the path to the directory where the topics will be stored. It's relative to the `stream.path` option.
-
-#### Partition
-
-- `path` - the path to the directory where the partitions will be stored. It's relative to the `topic.path` option.
-
-- `deduplicate_messages` - whether the messages with same ID should be ignored. When sending the messages, you can optionally provide their unique ID - if the same ID is set more than once, then the message will be ignored. Deduplication is unique per partition.
-
-- `enforce_fsync` - whether the data should be saved synchronously (enforce `fsync`) or asynchronously (let the OS decide when to actually flush the data onto disk).
-
-- `validate_checksum` - whether the message checksum (CRC) should be validated when loading the data from the disk. This can provide an additional layer of protection against the data corruption.
-
-- `messages_required_to_save` - the number of messages that will be buffered before saving them to the disk. This option along with the `enforce_fsync` allow you to control the trade-off between the performance and the strong consistency guarantees in terms of durability of the data.
-
-- `messages_buffer` - the number of the messages that will be kept in cache, in order to greatly speed up reading the records. While it's much faster to read the data from the memory than from disk, it's worth considering how much memory you want to allocate for this purpose. When the value is set to 0, the cache is disabled. Internally, it does use the ring buffer structure and the value must be power of 2.
-
-
-#### Segment
-
-- `message_expiry` - the number of seconds after which the message will be marked as expired. The expired messages will be removed from the disk when the segment is full (all the messages in the segment are expired). When set to 0, the message expiry is disabled.
-
-- `size_bytes` - the maximum size of the segment in bytes. When the size is reached, a new segment is automatically created. If the `message_expiry` is greater than 0, then the new segment will be created either after the size is reached or when all the messages are expired.
-
-- `cache_indexes` - whether the indexes required to read the messages by the specific offset should be cached in memory. Otherwise, the indexes will be read directly from the disk.
-
-- `cache_time_indexes` - whether the time indexes required to read the messages by the specific timestamp should be cached in memory. Otherwise, the  time indexes will be read directly from the disk.

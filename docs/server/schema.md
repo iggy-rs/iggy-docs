@@ -1,16 +1,22 @@
 ---
-id: specification-binary
-slug: /specification/binary
-title: Binary transport
-sidebar_position: 2
+id: server-schema
+slug: /server/schema
+title: Schema
+sidebar_position: 4
 ---
 
-## Command schema
+Since the Iggy server supports a variety of transport protocols, it is important to have a common schema for all of them, that will represent the data in a unified way. Commands (requests), responses, data models, status codes, must be the same for all transports.
 
-All the commands are represented as a binary message. The message consists of 3 parts: length, code and payload:
+Currently, there are 2 ways of data representation: JSON (text) and binary - any serialization format that you prefer such as bincode, SBE, flatbuffers, protobuf or even your custom one, as the server simply expects the raw bytes as the message payload.
+
+The binary format is more compact and efficient, but it is not human-readable - it's being used by TCP and QUIC transports. The JSON format is used by HTTP transport - all the existing endpoints are available in the [server.http](https://github.com/iggy-rs/iggy/blob/master/server/server.http).
+
+## Request schema
+
+All the requests are represented as a binary message. The message consists of 3 parts: length, code and payload:
 
 - length - 4-byte integer (u32) which represents the total length: code (4 bytes) + payload (N bytes)
-- code - 4-byte integer (u32) which represents the command code
+- code - 4-byte integer (u32) which represents the request code
 - payload - binary data of N bytes length
 
 For example, if the payload is 100 bytes, the length will have a value of 104 (100 bytes for payload + 4 const bytes for the code). The message as whole will have 108 (4 + 4 + 100) bytes size.
@@ -18,50 +24,81 @@ For example, if the payload is 100 bytes, the length will have a value of 104 (1
 ```
 +-----------------------------------------------------------+
 |           |           |                                   |
-|  LENGTH   |   CODE    |              PAYLOAD              | 
+|  LENGTH   |   CODE    |              PAYLOAD              |
 |           |           |                                   |
 +-----------------------------------------------------------+
-|  4 bytes  |  4 bytes  |              N bytes              | 
+|  4 bytes  |  4 bytes  |              N bytes              |
+```
+
+## Response schema
+
+All the responses are represented as a binary message. The message consists of 3 parts: status, length and payload:
+
+- status - 4-byte integer (u32) which represents the status code. The status code is 0 for success and any other value for an error.
+- length - 4-byte integer (u32) which represents the total length: status (4 bytes) + payload (N bytes)
+- payload - binary data of N bytes length
+
+In case of errors, the length will be always equal to 0 and the payload will be empty.
+
+When trying to fetch the resource which may not exist, such as a stream, topic, user etc., the response will have a status code 0 (OK), but the payload will be empty, as there's no data to return.
+
+```
++-----------------------------------------------------------+
+|           |           |                                   |
+|  STATUS   |  LENGTH   |              PAYLOAD              |
+|           |           |                                   |
++-----------------------------------------------------------+
+|  4 bytes  |  4 bytes  |              N bytes              |
 ```
 
 
-## Command codes
+## Request codes
 
-```
-PING = 1
-
-GET_STATS = 10
-
-GET_ME = 20
-GET_CLIENT = 21
-GET_CLIENTS = 22
-
-POLL_MESSAGES = 100
-SEND_MESSAGES = 101
-
-GET_CONSUMER_OFFSET = 120
-STORE_CONSUMER_OFFSET = 121
-
-GET_STREAM = 200
-GET_STREAMS = 201
-CREATE_STREAM = 202
-DELETE_STREAM = 203
-
-GET_TOPIC = 300
-GET_TOPICS = 301
-
-CREATE_TOPIC = 302
-DELETE_TOPIC = 303
-
-CREATE_PARTITIONS = 402
-DELETE_PARTITIONS = 403
-
-GET_CONSUMER_GROUP = 600
-GET_CONSUMER_GROUPS = 601
-CREATE_CONSUMER_GROUP = 602
-DELETE_CONSUMER_GROUP = 603
-JOIN_CONSUMER_GROUP = 604
-LEAVE_CONSUMER_GROUP = 605
+```bash
+PING = 1;
+GET_STATS = 10;
+GET_SNAPSHOT_FILE = 11;
+GET_ME = 20;
+GET_CLIENT = 21;
+GET_CLIENTS = 22;
+GET_USER = 31;
+GET_USERS = 32;
+CREATE_USER = 33;
+DELETE_USER = 34;
+UPDATE_USER = 35;
+UPDATE_PERMISSIONS = 36;
+CHANGE_PASSWORD = 37;
+LOGIN_USER = 38;
+LOGOUT_USER = 39;
+GET_PERSONAL_ACCESS_TOKENS = 41;
+CREATE_PERSONAL_ACCESS_TOKEN = 42;
+DELETE_PERSONAL_ACCESS_TOKEN = 43;
+LOGIN_WITH_PERSONAL_ACCESS_TOKEN = 44;
+POLL_MESSAGES = 100;
+SEND_MESSAGES = 101;
+FLUSH_UNSAVED_BUFFER = 102;
+GET_CONSUMER_OFFSET = 120;
+STORE_CONSUMER_OFFSET = 121;
+GET_STREAM = 200;
+GET_STREAMS = 201;
+CREATE_STREAM = 202;
+DELETE_STREAM = 203;
+UPDATE_STREAM = 204;
+PURGE_STREAM = 205;
+GET_TOPIC = 300;
+GET_TOPICS = 301;
+CREATE_TOPIC = 302;
+DELETE_TOPIC = 303;
+UPDATE_TOPIC = 304;
+PURGE_TOPIC = 305;
+CREATE_PARTITIONS = 402;
+DELETE_PARTITIONS = 403;
+GET_CONSUMER_GROUP = 600;
+GET_CONSUMER_GROUPS = 601;
+CREATE_CONSUMER_GROUP = 602;
+DELETE_CONSUMER_GROUP = 603;
+JOIN_CONSUMER_GROUP = 604;
+LEAVE_CONSUMER_GROUP = 605;
 ```
 
 ## Shared
@@ -228,7 +265,7 @@ pub struct CreateStream {
 - `stream_id` - 3-257 bytes
 - `name_length` - 1 byte (hidden field)
 - `name` - 1-255 bytes
-    
+
 
 ### Delete stream
 
