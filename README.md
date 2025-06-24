@@ -1,4 +1,6 @@
-# Iggy docs
+# The source code has been moved to [Apache Iggy Websiste](https://github.com/apache/iggy-website/)
+
+## Iggy docs
 
 The official documentation of [Iggy.rs](https://iggy.rs) being hosted at [docs.iggy.rs](https://docs.iggy.rs).
 
